@@ -1,0 +1,1107 @@
+\documentclass[xcolor=svgnames]{beamer}
+\usetheme{Boadilla}
+\usecolortheme[named=SeaGreen]{structure}
+\usepackage{graphicx}
+\usepackage{breqn}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{verbatim}
+\definecolor{links}{HTML}{2A1B81}
+\hypersetup{colorlinks,linkcolor=links,urlcolor=links}
+\usepackage{pgfpages}
+\usepackage{listings}
+
+%\usepackage{color}
+\lstset{
+language=R,                     % the language of the code
+%basicstyle=\footnotesize,       % the size of the fonts that are used for the code
+%numbers=left,                   % where to put the line-numbers
+%numberstyle=\tiny\color{gray},  % the style that is used for the line-nxumbers
+%stepnumber=1,                   % the step between two line-numbers. If it's 1, each line
+% will be numbered
+%numbersep=5pt,                  % how far the line-numbers are from the code
+backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+showspaces=false,               % show spaces adding particular underscores
+showstringspaces=false,         % underline spaces within strings
+showtabs=false,                 % show tabs within strings adding particular underscores
+%frame=single,                   % adds a frame around the code
+rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+tabsize=2,                      % sets default tabsize to 2 spaces
+captionpos=b,                   % sets the caption-position to bottom
+breaklines=true,                % sets automatic line breaking
+breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace
+%title=\lstname,                 % show the filename of files included with \lstinputlisting;
+% also try caption instead of title
+keywordstyle=\color{blue},      % keyword style
+commentstyle=\color{ForestGreen},   % comment style
+%stringstyle=\color{black},      % string literal style
+escapeinside={\%*}{*)},         % if you want to add a comment within your code
+morekeywords={*,...}            % if you want to add more keywords to the set
+}
+
+\newcommand{\ShowSexpr}[1]{\texttt{{\char`\\}Sexpr\{#1\}}}
+
+\usepackage{amsfonts, amsmath, hanging, hyperref, parskip, times}
+%\usepackage[numbers]{natbib}
+
+\usepackage[backend=bibtex,
+firstinits=true,
+style=authoryear,
+dashed=false,
+natbib=true,
+doi=false,
+isbn=false,
+url=false,
+uniquename=false,
+uniquelist=false,
+sorting=none,
+maxcitenames=2]{biblatex}
+\addbibresource{ggRandomForest.bib}
+
+\ifx\hypersetup\undefined
+\AtBeginDocument{%
+\hypersetup{unicode=true,pdfusetitle,
+bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
+breaklinks=false,pdfborder={0 0 0},backref=false,colorlinks=false}
+}
+\else
+\hypersetup{unicode=true,pdfusetitle,
+bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
+breaklinks=false,pdfborder={0 0 0},backref=false,colorlinks=false}
+\fi
+
+% \usetheme{CambridgeUS}
+% \usecolortheme{seahorse}
+
+\title{Survival in Random Forests}
+%\subtitle{The ggRandomForests package}
+\author[J. Ehrlinger]{John Ehrlinger}
+\institute[Cleveland Clinic] % (optional)
+{
+Department of Quantitative Health Sciences\\
+Lerner Research Institute\\
+Cleveland Clinic\\
+john.ehrlinger@gmail.com
+}
+\date[\today]
+
+<<setup, include=FALSE, cache=FALSE, echo=TRUE>>=
+library(knitr)
+# set global chunk options for knitr. These can be changed in the header for each individual R code chunk
+opts_chunk$set(fig.path='figures/',
+               fig.align='center',
+               fig.pos="!htpb",
+               fig.show='hold',
+               fig.height=4,
+               fig.width=6,
+               out.width='.9\\linewidth',
+               size='footnotesize',
+               comment="", echo=FALSE, results=FALSE, message=FALSE, warning=FALSE,
+               error=FALSE, dev='pdf')
+
+# Setup the R environment
+options(replace.assign=TRUE,object.size=Inf,expressions=100000,memory=Inf, width=100)
+
+#################
+# Load_packages #
+#################
+library(ggplot2) # Graphics engine for generating all types of plots
+library(reshape2) # Used to modify the data for plotting
+library(RColorBrewer) # Color schemes
+library(scales) # For modifying ggplot
+
+library(dplyr) # Better data manipulations
+
+library(parallel)
+options(mc.cores = detectCores()-1, rf.cores=detectCores()-1)
+
+library(ggRandomForests)
+library(randomForestSRC)
+library(plot3D)
+
+#########################################################################
+# Default computation settings
+#########################################################################
+theme_set(theme_bw())
+event.marks <- c(1,4)
+event.labels <- c(FALSE, TRUE)
+strCol <- brewer.pal(3, "Set1")
+strCol <- strCol[c(2,1,3)]
+alpha <- .3
+@
+
+\begin{document}
+\frame{\titlepage}
+%==================================================================================
+%==================================================================================
+
+\begin{frame}
+\frametitle{Random Forest}
+
+Mature statistical ``machine learning'' method for
+\begin{itemize}
+\item Regression (continuous outcomes)
+\item Classification (categorical outcomes)
+\item Survival (time to event outcomes)
+\item Others (competing risk, unsupervised, etc.)
+\end{itemize}
+
+Similar to C4.5
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest}
+
+Ensemble of decision trees
+\begin{itemize}
+\item Democratic method
+\item Individual weak learners
+\item Aggregate to a strong learner
+\end{itemize}
+
+Non-parametric
+\begin{itemize}
+\item No model assumptions
+\item Nonlinear
+\item Interactions
+\end{itemize}
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Data Set}
+\begin{itemize}
+\item $n$ observations
+\item $p$ independent variables
+\end{itemize}
+
+Ideally, want $n \rightarrow$ everyone (unrealistic)
+
+Instead simulate with the Bootstrap
+\begin{itemize}
+\item Randomly select $n$ observations with replacement (b)
+\item On average 36.8\% left out of bootstrap (oob)
+\end{itemize}
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest}
+Grow a collection of independent decision trees
+\begin{itemize}
+\item One for each Bootstrap data set
+\item Test with the associated oob data set
+\end{itemize}
+
+But decision trees are
+
+\begin{itemize}
+\item Inherently unstable
+\item Tend to over fit training data
+\end{itemize}
+
+They are an ideal weak learner suitable for RF application
+
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+
+Recursively partition the data
+
+\begin{itemize}
+\item Split data nodes (set) into two daughter nodes
+\item Repeat to exhaustion
+\end{itemize}
+
+Two requirements
+
+\begin{itemize}
+\item Split rule
+\item Stopping rule
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+
+Recursively
+Split rule
+
+Test each variable for optimal node segmenting
+
+\begin{itemize}
+\item Optimize over classes of categorical variables
+\item Optimize along values of continuous variables
+\end{itemize}
+
+Choose optimal variable
+
+Dependent on the problem domain
+
+\begin{itemize}
+\item Regression - MSE
+\item Classification - Gini index (Generalize Binomial Variance)
+\item Survival - Log-rank
+\end{itemize}
+
+Optimally segregate two groups of observations
+
+<< tree-diagram>>=
+# Build an artificial tree
+trData <- tbl_df(data.frame(matrix(NA, ncol=5, nrow=19)))
+colnames(trData)<- c("variable", "nodeID", "parentID", "depth", "terminal")
+
+trData$terminal=FALSE
+
+trData$nodeID <- 1:dim(trData)[1]
+trData$parentID <- c(0,1,1,2,2,3,3, 4, 4, 5,  5, 7,  7,  8,  8,  9,  9, 11, 11)
+trData$depth[1] <- 0
+trData$x <- c(-5,-10,2,-13,-5,0,7,-17,-10,-7,-2, 5,10,-19,-15,-12,-8,-4,0)
+
+trData$terminal[c(6,10,12,13,10,18,19,14,15,16,17)] <- TRUE
+
+trData$variable <- trData$nodeID
+trData$variable[which(trData$variable==9)] <- 3
+trData$variable[which(trData$variable==11)] <- 3
+trData$variable[which(trData$variable==7)] <- 8
+trData$variable <- paste("V", trData$variable, sep="")
+trData$variable[which(trData$terminal)] <- NA
+trData$variable<- factor(trData$variable)
+
+edgeList <- tbl_df(data.frame(matrix(ncol=4, nrow=18)))
+colnames(edgeList) <- c("fromX", "toX", "fromY", "toY")
+
+for(ind in 2:dim(trData)[1]){
+  trData$depth[ind] <- trData$depth[trData$parentID[ind]] +1
+}
+
+for(ind in 2:dim(trData)[1]){
+  edgeList[ind-1,] <- c(trData$x[trData$parentID[ind]],
+                        trData$x[ind],trData$depth[trData$parentID[ind]],
+                        trData$depth[ind])
+}
+
+dimX <- c(-21,12)
+dimY <- c(-1,5)
+@
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+
+<< treeDiagram0>>=
+dpth <- 0
+trD <- filter(trData,depth <= dpth)
+edL <- filter(edgeList,toY <= dpth)
+trD$variable[which(trData$depth == dpth)] <- NA
+ooD <- trD
+ooD$variable <- NA
+ooD$nodeID <- 0
+ooD$x=5
+trD <- rbind(trD, ooD)
+dtree <- ggplot(trD)+
+  #   geom_segment(aes(x=fromX, y=fromY, xend=toX, yend=toY), data=edL) +
+  geom_point(aes(x=x,y=depth, shape=terminal, fill=variable),
+             size=15)+
+  geom_text(aes(x=x,y=depth, label=c("b", "oob" )))+
+  scale_shape_manual(values=c(21,22))+
+  coord_cartesian(xlim=dimX, ylim=dimY)+
+  scale_fill_brewer(palette = "Dark2", na.value="white")+
+  coord_cartesian(xlim=dimX, ylim=dimY)+
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        axis.text=element_blank()
+  )+
+  labs(x="", y="")+
+  coord_cartesian(y=dimY, x=dimX)
+dtree
+
+@
+
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+
+<< treeDiagram1>>=
+dpth <- 1
+trD <- filter(trData,depth <= dpth)
+edL <- filter(edgeList,toY <= dpth)
+trD$variable[which(trData$depth == dpth)] <- NA
+trD <- rbind(trD, ooD)
+trD.t <- trD
+trD.t$variable <- as.character(trD.t$variable)
+trD.t$variable[nrow(trD.t)] <- "oob"
+
+dtree <- ggplot(trD)+
+  geom_segment(aes(x=fromX, y=fromY, xend=toX, yend=toY),
+               data=edL) +
+  geom_point(aes(x=x,y=depth, shape=terminal,
+                 fill=variable),size=15)+
+  geom_text(aes(x=x,y=depth, label=variable), data=trD.t)+
+  scale_shape_manual(values=c(21,22))+
+  coord_cartesian(xlim=dimX, ylim=dimY)+
+  scale_fill_brewer(palette = "Dark2", na.value="white")+
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        axis.text=element_blank()
+  )+
+  labs(x="", y="")
+dtree +
+  coord_cartesian(y=dimY, x=dimX)
+@
+
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+<< treeDiagram4>>=
+dpth <- 4
+trD <- filter(trData,depth <= dpth)
+edL <- filter(edgeList,toY <= dpth)
+trD$variable[which(trData$depth == dpth)] <- NA
+trD <- rbind(trD, ooD)
+trD.t <- trD
+trD.t$variable <- as.character(trD.t$variable)
+trD.t$variable[nrow(trD.t)] <- "oob"
+decTree <- ggplot(trD)+
+  geom_segment(aes(x=fromX, y=fromY, xend=toX, yend=toY),
+               data=edL) +
+  geom_point(aes(x=x,y=depth, shape=terminal,
+                 fill=variable),size=15)+
+  geom_text(aes(x=x,y=depth, label=variable), data=trD.t)+
+  scale_shape_manual(values=c(21,22))+
+  coord_cartesian(xlim=dimX, ylim=dimY)+
+  scale_fill_brewer(palette = "Dark2", na.value="white")+
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        axis.text=element_blank()
+  )+
+  labs(x="", y="")
+decTree +
+  coord_cartesian(y=dimY, x=dimX)
+
+@
+
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Growing a Decision Tree}
+Stopping Rule defines Terminal Nodes
+\begin{itemize}
+\item Minimal number of members
+\item Homogeneity
+\end{itemize}
+
+Defaults depend on the problem domain
+
+\begin{itemize}
+\item Regression - min 5 unique cases
+\item Classification - homogeneous node (min of 1)
+\item Survival - min 3 unique cases
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Testing a Decision Tree}
+
+Tree sorts each observation into a unique terminal nodes
+
+Test the tree with oob data.
+\begin{itemize}
+\item Sort test observations into terminal nodes
+  \item Predict from training observations
+  \item Compare with test response
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Testing a Decision Tree}
+
+<< decisionTree>>=
+decTree
+@
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Decision Tree Prediction}
+
+Defined by terminal node membership.
+\begin{itemize}
+\item Fit a model to training set members
+\item Predict from model
+\end{itemize}
+
+One model for each terminal node within the tree.
+
+Depends on the problem domain
+\begin{itemize}
+\item Regression - mean value
+\item Classification - probability of class membership
+\item Survival - Kaplan--Meier estimates
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest Trees}
+
+A forest of independent decision trees
+
+\begin{itemize}
+\item Independent bootstrap training data
+\item Add extra randomization step
+\end{itemize}
+
+At each node split, RF randomly selects a subset (mtry $\le p$) of candidate variables for the split rule optimization
+
+Default depends on the problem domain
+
+\begin{itemize}
+\item Regression - mtry = ceiling$(p/3)$
+\item Classification - mtry = ceiling$(\sqrt{p})$
+\item Survival - mtry = ceiling$(\sqrt{p})$
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest Prediction}
+
+A forest of independent decision trees
+
+\begin{itemize}
+\item Observations in a terminal node have the same predicted outcome
+\item Bagging (Bootstrap Aggregation) over all trees
+\end{itemize}
+
+Default depends on the problem domain
+
+\begin{itemize}
+\item Regression - average estimates
+\item Classification - voting or average probabilty
+\item Survival - average survival estimates
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest Performance}
+
+Measure of generalization error
+
+\begin{itemize}
+\item oob data used to calculate forest prediction error
+\end{itemize}
+Depends on the problem domain
+\begin{itemize}
+\item Regression - MSE
+\item Classification - Misclassification error
+\item Survival - Harrell's concordance index
+\end{itemize}
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Breiman's Two Cultures}
+
+Machine Learning vs. Statistics
+
+Machine Learning:
+
+\begin{itemize}
+\item Prediction, Prediction, Prediction
+\item Black box modeling
+\end{itemize}
+
+Statistics:
+\begin{itemize}
+\item Why?
+\item Information on underlying process
+\end{itemize}
+
+Random Forest:
+
+\begin{itemize}
+\item Why not both?
+\item Insight into the black box of prediction
+\end{itemize}
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Example}
+Primary Biliary Cirrhosis (PBC) of the liver data set
+
+(Fleming and Harrington 1991)
+
+Randomized  trial of D-penicillamine (DPCA) at Mayo Clinic
+
+312 patients from 1974 to 1984
+\begin{itemize}
+\item 125 deaths
+\item 17 variables
+\end{itemize}
+<< setup-pbc>>=
+################ Default Settings ##################
+theme_set(theme_bw())     # A ggplot2 theme with white background
+
+## Set open circle for censored, and x for events
+event.marks <- c(1, 4)
+event.labels <- c(FALSE, TRUE)
+
+## We want red for death events, so reorder this set.
+strCol <- brewer.pal(3, "Set1")[c(2,1,3)]
+data(pbc, package = "randomForestSRC")
+
+library("reshape2")        # Transforming wide data into long data (melt)
+
+## Not displayed ##
+
+## Set modes correctly. For binary variables: transform to logical
+## Check for range of 0, 1
+## There is probably a better way to do this.
+for(ind in 1:dim(pbc)[2]){
+  if(!is.factor(pbc[, ind])){
+    if(length(unique(pbc[which(!is.na(pbc[, ind])), ind]))<= 2) {
+      if(sum(range(pbc[, ind], na.rm = TRUE) ==  c(0, 1)) ==  2){
+        pbc[, ind] <- as.logical(pbc[, ind])
+      }
+    }
+  }else{
+    if(length(unique(pbc[which(!is.na(pbc[, ind])), ind]))<= 2) {
+      if(sum(sort(unique(pbc[, ind])) ==  c(0, 1)) ==  2){
+        pbc[, ind] <- as.logical(pbc[, ind])
+      }
+      if(sum(sort(unique(pbc[, ind])) ==  c(FALSE, TRUE)) ==  2){
+        pbc[, ind] <- as.logical(pbc[, ind])
+      }
+    }
+  }
+  if(!is.logical(pbc[, ind]) &
+       length(unique(pbc[which(!is.na(pbc[, ind])), ind]))<= 5) {
+    pbc[, ind] <- factor(pbc[, ind])
+  }
+}
+# Convert age to years
+pbc$age <- pbc$age/364.24
+pbc$years <- pbc$days/364.24
+pbc <- pbc %>% select(-days)
+pbc$treatment <- as.numeric(pbc$treatment)
+pbc$treatment[which(pbc$treatment == 1)] <- "DPCA"
+pbc$treatment[which(pbc$treatment == 2)] <- "placebo"
+pbc$treatment <- factor(pbc$treatment)
+
+cls <- sapply(pbc, class)
+
+labels <- c("Event (F = censor, T = death)",
+            "Treament (DPCA, Placebo)",
+            "Age (years)",
+            "Female = T",
+            "Presence of Asictes",
+            "Presence of Hepatomegaly",
+            "Presence of Spiders",
+            "Edema (0, 0.5, 1)",
+            "Serum Bilirubin (mg/dl)",
+            "Serum Cholesterol (mg/dl)",
+            "Albumin (gm/dl)",
+            "Urine Copper (ug/day)",
+            "Alkaline Phosphatase (U/liter)",
+            "SGOT (U/ml)",
+            "Triglicerides (mg/dl)",
+            "Platelets per cubic ml/1000",
+            "Prothrombin time (sec)",
+            "Histologic Stage",
+            "Time (years)")
+
+dta.labs <- data.frame(cbind(names = colnames(pbc), label = labels, type = cls))
+# Put the "years" variable on top.
+dta.labs <- rbind(dta.labs[nrow(dta.labs),], dta.labs[-nrow(dta.labs),])
+
+st.labs <- as.character(dta.labs$label)
+names(st.labs) <- rownames(dta.labs)
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Example}
+
+PBC Cox proportional hazard model
+
+<<fh-model>>=
+## Not displayed ##
+# Create a table summarizing the ph model from fleming and harrington 1991
+fleming.table <- data.frame(matrix(ncol = 4, nrow = 5))
+fleming.table[,1] <-
+  c("Age", "log(Albumin)", "log(Bilirubin)", "Edema", "log(Prothrombin Time)")
+colnames(fleming.table) <- c("Variables","Coef.", "Std. Err.", "Z stat.")
+fleming.table[,2] <- c(0.0333, -3.0553,0.8792, 0.7847, 3.0157)
+fleming.table[,3] <- c(0.00866, 0.72408,0.09873,0.29913,1.02380)
+fleming.table[,4] <- c(3.84,-4.22,8.9,2.62,2.95)
+
+kable(fleming.table,
+      row.names=NA,
+      format="latex",
+      digits = 3,
+      booktabs=TRUE)
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Survival Forest}
+
+<< pbc-forest>>=
+# in reality, we use data caching to make vignette
+# compilation quicker. The rfsrc_pbc forest is stored
+# as a ggRandomForests data sets
+#
+# This code block produces the R output from the
+# rfsrc grow block above. We set the chunk argument
+# "echo=FALSE" above so this code does not show up
+# in the manuscript.
+data(rfsrc_pbc, package = "ggRandomForests")
+ggRFsrc <- plot.gg_rfsrc(rfsrc_pbc, alpha = .2) +
+  scale_color_manual(values = strCol) +
+  theme(legend.position = "none") +
+  labs(y = "Survival Probability", x = "time (years)")+
+  coord_cartesian(y = c(-.01,1.01))
+
+# Display the figure
+show(ggRFsrc)
+
+@
+\end{frame}
+%' %==================================================================================
+%' \begin{frame}
+%' \frametitle{Random Survival Forest}
+%'
+%' << pbd-treatment>>=
+%' gg_plt <-  plot(gg_rfsrc(rfsrc_pbc, by="treatment")) +
+%'   theme(legend.position = c(.2,.2)) +
+%'   labs(y = "Survival Probability", x = "time (years)",
+%'        color="Treatment", fill="Treatment")+
+%'   scale_color_brewer(palette="Set1")+
+%'   coord_cartesian(y = c(-.01,1.01))
+%' gg_plt
+%' @
+%' \end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection}
+
+Two independent methods
+
+Variable IMPortance (VIMP)
+
+\begin{itemize}
+\item Based on RF Prediction Error
+\item Measures the impact of variable misspecification
+\end{itemize}
+
+Minimal Depth
+
+\begin{itemize}
+\item Property of decision tree construction
+\item Measures how a variable segments nodes
+\end{itemize}
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - VIMP}
+
+Prediction error (PE) estimate from oob data
+
+For each variable:
+\begin{itemize}
+\item  Randomize values within the variable
+\item Predict with randomized data
+\item Calculate a New Prediction Error estimate (NPE)
+\end{itemize}
+
+VIMP = PE - NPE
+\begin{itemize}
+\item Positive value: important in reducing error
+\item Near zero: no impact on prediction
+\item Negative value: noise variable
+\end{itemize}
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - VIMP}
+<< rf-pbc-vimp>>=
+ggvm <- plot.gg_vimp(rfsrc_pbc, lbls = st.labs) +
+  theme(legend.position = c(.8,.2))+
+  labs(fill = "VIMP > 0")
+ggvm
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - Minimal Depth}
+
+Within each tree
+\begin{itemize}
+\item  Number the node split levels
+\item Find the minimum split level for each variable
+\end{itemize}
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - Minimal Depth}
+<< treeDepth>>=
+decTree <- decTree+
+  scale_y_continuous(breaks=0:4)+
+  theme_bw()+
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.line.y = element_line(color="black"),
+        panel.grid.major.y = element_line(color="black")
+  )+
+  labs(x="", y="Tree Depth")
+decTree
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - Minimal Depth}
+
+Average minimal split levels
+\begin{itemize}
+\item  each variable
+  \item over the forest
+\end{itemize}
+
+Lower values split largest nodes
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Selection - Minimal Depth}
+<< mindepth-pbc>>=
+data(varsel_pbc, package = "ggRandomForests")
+gg_md <- gg_minimal_depth(varsel_pbc)
+ggm <- plot(gg_md, lbls = st.labs)
+ggm
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Random Forest}
+Which variables contribute to forest prediction?
+\begin{itemize}
+\item  VIMP and Minimal Depth
+\end{itemize}
+
+How does response depend on variables?
+\begin{itemize}
+\item  Variable Dependence - Observation Based
+\item  Partial Dependence - Population Based
+\end{itemize}
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Dependence}
+
+Observation based
+
+<< rfsrc-plot3Mnth-pbc>>=
+gg_plt <- ggRFsrc +
+  geom_vline(aes(xintercept = c(1, 3)), linetype = "dashed") +
+  coord_cartesian(x = c(0, 5))
+
+gg_plt
+@
+
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Variable Dependence}
+
+<< variable-plot-pbc>>=
+gg_v <- gg_variable(rfsrc_pbc, time = c(1, 3),
+                    time.labels = c("1 Year", "3 Years"))
+xvar <- c("bili", "albumin", "copper", "prothrombin", "age")
+
+# The categorical variable
+xvar.cat <- c("edema")
+
+# panel the remaining continuous variable dependence plots.
+gg_plt <- plot(gg_v, xvar = xvar, panel = TRUE,
+               se = FALSE, alpha = .4, span=1)+
+  labs(y = "Survival") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = strCol, labels = event.labels) +
+  scale_shape_manual(values = event.marks, labels = event.labels)+
+  coord_cartesian(y = c(-.05,1.05))
+
+gg_plt
+
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+Population Based
+
+\begin{itemize}
+\item  Create nomograms for each observation
+\begin{itemize}
+\item  Across values of variable of interest
+    \item At selected times for survival
+\end{itemize}
+  \item Average response
+\end{itemize}
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< rfs-points>>=
+# Create nomograms for bili
+xv <- rfsrc_pbc$xvar
+
+bilipts <- quantile_pts(xv$bili, groups=6)
+bilipts <- bilipts[-c(1, length(bilipts))]
+gg_v <- gg_variable(rfsrc_pbc, time =3)
+
+gg_plt <- plot(gg_v, xvar = "bili",
+               se = FALSE, alpha = .4, span=1)+
+  labs(y = "Survival (3 years)", x="Bilirubin") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = strCol, labels = event.labels) +
+  scale_shape_manual(values = event.marks, labels = event.labels)+
+  coord_cartesian(y = c(-.05,1.05))+
+  scale_x_continuous(breaks=seq(0,30,5))+
+  geom_vline(aes(xintercept = bilipts), linetype = "dashed")
+
+gg_plt
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< rfs-nomo>>=
+# Create nomograms for bili
+prd <- lapply(bilipts, function(bl){
+  xv$bili <- bl
+  predict(rfsrc_pbc,
+          newdata = xv,
+          na.action="na.impute",
+          importance="none")
+})
+
+gg_rf <- lapply(prd, function(st){
+  ss <- data.frame(st$survival)
+  colnames(ss) <- as.character(rfsrc_pbc$time.interest)
+  ss$ptid <- 1:nrow(ss)
+  ss$cens <- rfsrc_pbc$yvar$status
+  melt(ss, id.vars=c("ptid", "cens"))})
+
+gg_rf <- lapply(1:length(bilipts), function(ind){
+  gg_rf[[ind]]$bili <- paste("bilirubin =", bilipts[ind])
+  gg_rf[[ind]]})
+
+ggdt <- do.call(rbind, gg_rf)
+ggdt$cens <- as.logical(ggdt$cens)
+ggdt$bili <- factor(ggdt$bili, levels=unique(ggdt$bili))
+ggdt$variable <- as.numeric(as.character(ggdt$variable))
+ggdt$ptid <- factor(ggdt$ptid)
+
+gg_nom <- ggplot(ggdt, aes(x=variable, y=value, color=cens, by=ptid))+
+  geom_step(alpha=.2)+
+  scale_color_manual(values = strCol, labels = event.labels) +
+  scale_shape_manual(values = event.marks, labels = event.labels)+
+  coord_cartesian(y = c(-.05,1.05), x=c(-.1,5.1))+
+  labs(y = "Survival", x="Time (Years)") +
+  theme(legend.position="none") +
+  facet_wrap(~bili)
+
+gg_nom+
+  geom_vline(aes(xintercept =3), linetype = "dashed")
+
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< nomogram-vdep>>=
+ggvd <- lapply(prd, function(st){
+  indx <- which(rfsrc_pbc$time.interest >3)[1] - 1
+  ss <- data.frame(yhat=st$survival[,indx])
+  ss$ptid <- 1:nrow(ss)
+  ss$cens <- rfsrc_pbc$yvar$status
+  ss})
+
+ggvd <- lapply(1:length(bilipts), function(ind){
+  ggvd[[ind]]$bili <- bilipts[ind]
+  ggvd[[ind]]})
+
+ggmn <- data.frame(t(sapply(ggvd, function(st){
+  c(st$bili[1], mean(st$yhat))
+})))
+
+ggdt <- do.call(rbind, ggvd)
+ggdt$cens <- as.logical(ggdt$cens)
+
+gg_plt <- ggplot(ggdt)+
+  geom_point(aes(x=bili, y=yhat, shape=cens, color=cens),alpha=.4)+
+  labs(y = "Survival (3 years)", x="Bilirubin") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = strCol, labels = event.labels) +
+  scale_shape_manual(values = event.marks, labels = event.labels)+
+  scale_x_continuous(breaks=seq(0,30,5))+
+  coord_cartesian(y = c(-.05,1.05), x=c(-1,29))
+gg_plt
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< nomogram-vdep-mean>>=
+
+gg_plt <- ggplot(ggdt)+
+  geom_boxplot(aes(x=bili, y=yhat, by=factor(bili)), color="black", outlier.shape = NA)+
+  geom_jitter(aes(x=bili, y=yhat, shape=cens, color=cens),alpha=.4)+
+  labs(y = "Survival (3 years)", x="Bilirubin") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = strCol, labels = event.labels) +
+  scale_shape_manual(values = event.marks, labels = event.labels)+
+  scale_x_continuous(breaks=seq(0,30,5))+
+  coord_cartesian(y = c(-.05,1.05), x=c(-1,29))
+gg_plt
+
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< pbc-partial>>=
+data("partial_pbc", package = "ggRandomForests")
+xvar <- c(xvar, xvar.cat)
+gg_dta <- mclapply(partial_pbc, gg_partial)
+
+# Combine the timed gg_partial objects together.
+pbc_ggpart <- combine.gg_partial(gg_dta[[1]], gg_dta[[2]],
+                                 lbls = c("1 Year", "3 Years"))
+
+ggpart <- pbc_ggpart
+ggpart$edema <- NULL
+
+gg_plt <- plot(ggpart[[1]], se = FALSE) +
+  labs(x = "Bilirubin", y = "Survival", color = "Time", shape = "Time") +
+  theme(legend.position = c(.8, .2)) +
+  scale_x_continuous(breaks=seq(0,30,5))+
+  coord_cartesian(y = c(25,101))
+gg_plt
+
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+<< partialpanel>>=
+ggpart[[1]] <- NULL
+gg_plt <- plot(ggpart, se = FALSE, panel = TRUE) +
+  labs(x = "", y = "Survival", color = "Time", shape = "Time") +
+  theme(legend.position = "none") +
+  coord_cartesian(y = c(25,101))
+gg_plt
+@
+\end{frame}
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< rfs-nomo2>>=
+gg_nom
+@
+\end{frame}
+
+%==================================================================================
+\begin{frame}
+\frametitle{Partial Dependence}
+
+<< pbc-timeSurface>>=
+# Restrict the time of interest to less than 5 years.
+time_pts <- rfsrc_pbc$time.interest[which(rfsrc_pbc$time.interest<=5)]
+
+# Find the 50 points in time, evenly space along the distribution of
+# event times for a series of partial dependence curves
+time_cts <-quantile_pts(time_pts, groups = 50)
+
+# Load the stored partial coplot data.
+data(partial_pbc_time)
+
+# We need to attach the time points of interest to our data.
+time.tmp <- do.call(c,lapply(time_cts,
+                             function(grp){rep(grp, 50)}))
+
+# Convert the list of plot.variable output to gg_partial
+partial_time <- do.call(rbind,lapply(partial_pbc_time, gg_partial))
+
+# attach the time data to the gg_partial_coplot
+partial_time$time <- time.tmp
+
+# Modify the figure margins to make it larger
+par(mai = c(0.5,0.55,0,0))
+
+# Transform the gg_partial_coplot object into a list of three named matrices
+# for surface plotting with plot3D::surf3D
+srf <- surface_matrix(partial_time, c("time", "bili", "yhat"))
+
+# Generate the figure.
+surf3D(x = srf$x, y = srf$y, z = srf$z, col = heat.colors(25),
+       colkey = FALSE, border = "black", bty = "b2",
+       shade = 0.5, expand = 0.5, theta=110, phi=15,
+       lighting = TRUE, lphi = -50, ticktype="detailed",
+       ylab = "Bilirubin", xlab = "Time", zlab = "Survival"
+)
+
+# Extract the 1 and 3 year points.
+# Find the indices of the points closest in time
+t.pts <- sapply(c(1,3), function(pt){min(abs(srf$x - pt), na.rm=TRUE)})
+indx <- vector("list", length=2)
+indx[[1]] <- which(abs(srf$x - 1) < t.pts[1]+1.e-5)
+indx[[2]] <- which(abs(srf$x - 3) < t.pts[2]+1.e-5)
+
+# Generate curves along 1 and 3 year partial dependence
+alt <- lapply(indx, function(ind){
+  lines3D(x=srf$x[ind], y=srf$y[ind],z=srf$z[ind],
+          add=TRUE, col="blue", lwd=6)
+})
+
+@
+\end{frame}
+
+\end{document}

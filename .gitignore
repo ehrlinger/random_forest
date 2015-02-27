@@ -1,0 +1,13 @@
+.Rhistory
+.RData
+*.aux
+*.bbl
+*.log
+*.out
+*.nav
+*.blb
+*.xml
+*.snm
+*.toc
+.RProj.user
+*concordance.tex
