@@ -94,17 +94,17 @@ Optimally segregate two groups of observations
 ## Growing a Decision Tree
 
 
-<img src="figs/rfs-treeDiagram0-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/treeDiagram0-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 
 ## Growing a Decision Tree
 
-<img src="figs/rfs-treeDiagram1-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/treeDiagram1-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 
 ## Growing a Decision Tree
 
-<img src="figs/rfs-treeDiagram4-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/treeDiagram4-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 
 ##  Growing a Decision Tree
@@ -132,7 +132,7 @@ Test the tree with oob data.
   
 ## Testing a Decision Tree 
 
-<img src="figs/rfs-decisionTree-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/decisionTree-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Decision Tree Prediction
 
@@ -243,11 +243,11 @@ Mayo Clinic
 
 ## Random Survival Forest
 
-<img src="figs/rfs-pbc-forest-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/pbc-forest-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Random Survival Forest
 
-<img src="figs/rfs-pbd-treatment-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/pbd-treatment-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Variable Selection
 
@@ -280,7 +280,7 @@ VIMP = PE - NPE
 * Negative value: noise variable 
 
 ## Variable Selection - VIMP
-<img src="figs/rfs-rf-pbc-vimp-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/rf-pbc-vimp-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ##  Variable Selection - Minimal Depth
 
@@ -291,7 +291,7 @@ Within each tree
 
 
 ##  Variable Selection - Minimal Depth
-<img src="figs/rfs-treeDepth-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/treeDepth-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ##  Variable Selection - Minimal Depth
 
@@ -303,7 +303,7 @@ Average minimal split levels
 Lower values split largest nodes
 
 ##  Variable Selection - Minimal Depth
-<img src="figs/rfs-mindepth-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/mindepth-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Random Forest
 
@@ -338,11 +338,11 @@ Observation based
 
 ## Variable Dependence
 
-<img src="figs/rfs-rfsrc-plot3Mnth-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/rfsrc-plot3Mnth-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Variable Dependence
 
-<img src="figs/rfs-variable-plot-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/variable-plot-pbc-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 
 
@@ -358,27 +358,27 @@ Population Based
 
 ## Partial Dependence
 
-<img src="figs/rfs-rfs-points-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/rfs-points-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
 
-<img src="figs/rfs-rfs-nomo-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/rfs-nomo-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
 
-<img src="figs/rfs-nomogram-vdep-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/nomogram-vdep-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
 
-<img src="figs/rfs-nomogram-vdep-mean-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/nomogram-vdep-mean-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
 
-<img src="figs/rfs-pbc-partial-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/pbc-partial-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
-<img src="figs/rfs-partialpanel-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/partialpanel-1.pdf" title="" alt="" style="display: block; margin: auto;" />
 
 ## Partial Dependence
 
-<img src="figs/rfs-pbc-timeSurface-1.pdf" title="" alt="" style="display: block; margin: auto;" />
+<img src="slides_files/figure-html/pbc-timeSurface-1.pdf" title="" alt="" style="display: block; margin: auto;" />

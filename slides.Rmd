@@ -12,10 +12,7 @@ output:
 ```{r setup, echo=FALSE, results=FALSE, message=FALSE, warnings=FALSE,error=FALSE}
 library(knitr)
 # set global chunk options for knitr. These can be changed in the header for each individual R code chunk
-opts_chunk$set(fig.path='figs/rfs-', 
-               fig.align='center',
-               fig.height=3,
-               fig.width=4,
+opts_chunk$set(fig.align='center',
                comment="", echo=FALSE, results=FALSE, message=FALSE, warning=FALSE,
                error=FALSE, dev='pdf')
 

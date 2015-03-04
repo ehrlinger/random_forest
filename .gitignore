@@ -11,3 +11,7 @@
 *.toc
 .RProj.user
 *concordance.tex
+*.syntec.gz
+
+
+*.gz
